@@ -1,0 +1,18 @@
+---
+layout: default
+title: Blog
+---
+
+<h1>Blog & Appunti</h1>
+<p>Pensieri, ricerche e note sullo studio dell'AI.</p>
+
+<ul style="list-style: none; padding: 0;">
+  {% for post in site.posts %}
+    <li style="margin-bottom: 20px;">
+      <span style="color: #666; font-size: 0.9em;">{{ post.date | date: "%Y-%m-%d" }}</span><br>
+      <a href="{{ post.url | relative_url }}" style="font-size: 1.2em; font-weight: bold;">{{ post.title }}</a>
+    </li>
+  {% endfor %}
+</ul>
+
+<a href="/" class="back-link">&larr; Torna alla Home</a>
