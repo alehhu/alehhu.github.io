@@ -22,6 +22,8 @@
   var btnCopyLink = document.getElementById("btn-copy-link");
   var btnToggleDraft = document.getElementById("btn-toggle-draft");
   var btnDelete = document.getElementById("btn-delete");
+  var btnInsertImage = document.getElementById("btn-insert-image");
+  var imageInput = document.getElementById("image-input");
   var preview = document.getElementById("preview");
 
   var PAGE_TITLES = { home: "Home", cv: "CV" };
@@ -83,6 +85,58 @@
     }, 200);
   }
   cm.on("change", updatePreview);
+
+  // --- image upload: toolbar button, drag & drop, and paste-from-clipboard ---
+  function uploadImage(file) {
+    if (!file || file.type.indexOf("image/") !== 0) return;
+    var form = new FormData();
+    form.append("file", file);
+    fetch("/api/assets/images", { method: "POST", body: form })
+      .then(function (res) {
+        return res.json().then(function (data) {
+          if (!res.ok) throw new Error(data.error || res.statusText);
+          return data;
+        });
+      })
+      .then(function (data) {
+        cm.replaceSelection("![" + data.alt + "](" + data.path + ")");
+        cm.focus();
+      })
+      .catch(function (err) {
+        alert("Error uploading image: " + err.message);
+      });
+  }
+
+  btnInsertImage.onclick = function () {
+    imageInput.value = "";
+    imageInput.click();
+  };
+  imageInput.onchange = function () {
+    if (imageInput.files && imageInput.files[0]) uploadImage(imageInput.files[0]);
+  };
+
+  cm.on("drop", function (instance, event) {
+    if (!event.dataTransfer || !event.dataTransfer.files || !event.dataTransfer.files.length) return;
+    var files = event.dataTransfer.files;
+    var hasImage = false;
+    for (var i = 0; i < files.length; i++) {
+      if (files[i].type.indexOf("image/") === 0) hasImage = true;
+    }
+    if (!hasImage) return; // let CodeMirror handle plain text drops as usual
+    event.preventDefault();
+    for (var j = 0; j < files.length; j++) uploadImage(files[j]);
+  });
+
+  cm.on("paste", function (instance, event) {
+    var items = event.clipboardData && event.clipboardData.items;
+    if (!items) return;
+    for (var i = 0; i < items.length; i++) {
+      if (items[i].kind === "file" && items[i].type.indexOf("image/") === 0) {
+        event.preventDefault();
+        uploadImage(items[i].getAsFile());
+      }
+    }
+  });
 
   // --- API helpers ---
   function api(method, url, body) {

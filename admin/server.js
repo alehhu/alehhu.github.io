@@ -1,4 +1,5 @@
 const express = require("express");
+const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
 const matter = require("gray-matter");
@@ -8,6 +9,8 @@ const openBrowser = require("./lib/open");
 
 const ROOT = path.join(__dirname, "..");
 const CONTENT_DIR = path.join(ROOT, "content");
+const ASSETS_DIR = path.join(ROOT, "assets");
+const IMAGES_DIR = path.join(ASSETS_DIR, "images");
 const DIRS = {
   posts: path.join(CONTENT_DIR, "posts"),
   portfolio: path.join(CONTENT_DIR, "portfolio"),
@@ -20,6 +23,7 @@ const PAGES = {
 };
 const SITE_DIR = path.join(ROOT, "_site");
 const PORT = 4000;
+const ALLOWED_IMAGE_EXT = [".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"];
 
 const app = express();
 app.use(express.json());
@@ -30,10 +34,17 @@ app.use(express.static(path.join(__dirname, "public")));
 // Local live preview of the generated site
 app.use("/preview", express.static(SITE_DIR));
 
+// Serve assets/ at the same absolute path they'll have on the published
+// site (/assets/...), so images inserted while writing show up immediately
+// in the editor's live preview too, without needing a full rebuild.
+app.use("/assets", express.static(ASSETS_DIR));
+
 // Vendored editor libraries served straight from node_modules (fully offline, no CDN)
 app.use("/vendor/codemirror", express.static(path.join(ROOT, "node_modules", "codemirror")));
 app.use("/vendor/katex", express.static(path.join(ROOT, "node_modules", "katex", "dist")));
 app.use("/vendor/marked", express.static(path.join(ROOT, "node_modules", "marked", "lib")));
+
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 function isValidFilename(name) {
   return typeof name === "string" && /^[a-zA-Z0-9._-]+\.md$/.test(name) && !name.includes("..");
@@ -217,6 +228,34 @@ app.put("/api/pages/:name", (req, res) => {
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
+});
+
+// Upload an image, save it into assets/images/, return its site-relative path.
+app.post("/api/assets/images", upload.single("file"), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: "no file uploaded" });
+
+  const ext = path.extname(req.file.originalname || "").toLowerCase();
+  if (!ALLOWED_IMAGE_EXT.includes(ext)) {
+    return res.status(400).json({ error: `unsupported image type: ${ext || "unknown"}` });
+  }
+
+  const base =
+    path
+      .basename(req.file.originalname || "image", ext)
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "image";
+
+  fs.mkdirSync(IMAGES_DIR, { recursive: true });
+  let filename = `${base}${ext}`;
+  let counter = 1;
+  while (fs.existsSync(path.join(IMAGES_DIR, filename))) {
+    filename = `${base}-${counter}${ext}`;
+    counter += 1;
+  }
+
+  fs.writeFileSync(path.join(IMAGES_DIR, filename), req.file.buffer);
+  res.json({ path: `/assets/images/${filename}`, alt: base.replace(/-/g, " ") });
 });
 
 rebuild();
