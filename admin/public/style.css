@@ -124,6 +124,14 @@ button:hover {
   font-size: 0.85rem;
 }
 
+.url {
+  font-size: 0.8rem;
+  color: #555;
+  background: #f0f0f0;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+}
+
 .frontmatter-form {
   display: flex;
   flex-wrap: wrap;

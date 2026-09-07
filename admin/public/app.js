@@ -18,6 +18,8 @@
   var fieldExcerptWrap = document.getElementById("field-excerpt-wrap");
   var fieldDraftWrap = document.getElementById("field-draft-wrap");
   var editorStatus = document.getElementById("editor-status");
+  var editorUrl = document.getElementById("editor-url");
+  var btnCopyLink = document.getElementById("btn-copy-link");
   var btnToggleDraft = document.getElementById("btn-toggle-draft");
   var btnDelete = document.getElementById("btn-delete");
   var preview = document.getElementById("preview");
@@ -240,6 +242,75 @@
     btnToggleDraft.textContent = current.draft ? "Publish" : "Move to drafts";
   }
 
+  // Mirrors the slug/URL rules in admin/build.js: date prefix (if any) is
+  // stripped from the URL, "posts" -> /blog/, "portfolio" -> /projects/.
+  function slugFromFilename(filename) {
+    var m = filename.match(/^(\d{4}-\d{2}-\d{2})-(.+)\.md$/);
+    return m ? m[2] : filename.replace(/\.md$/, "");
+  }
+
+  function computeUrl() {
+    if (!current) return null;
+    if (current.kind === "page") {
+      if (current.name === "home") return "/";
+      if (current.name === "cv") return "/cv/";
+      return null;
+    }
+    if (current.kind === "item" && !current.isNew && !current.draft) {
+      var prefix = current.collection === "portfolio" ? "/projects/" : "/blog/";
+      return prefix + slugFromFilename(current.filename) + "/";
+    }
+    return null; // drafts and unsaved new items have no live URL yet
+  }
+
+  function updateLinkUI() {
+    var url = computeUrl();
+    if (url) {
+      editorUrl.textContent = url;
+      editorUrl.hidden = false;
+      btnCopyLink.hidden = false;
+      btnCopyLink.textContent = "Copy link";
+    } else {
+      editorUrl.hidden = true;
+      btnCopyLink.hidden = true;
+    }
+  }
+
+  function copyLink() {
+    var url = computeUrl();
+    if (!url) return;
+    var done = function () {
+      btnCopyLink.textContent = "Copied!";
+      setTimeout(function () {
+        btnCopyLink.textContent = "Copy link";
+      }, 1200);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(done, function () {
+        fallbackCopy(url);
+        done();
+      });
+    } else {
+      fallbackCopy(url);
+      done();
+    }
+  }
+
+  function fallbackCopy(text) {
+    var el = document.createElement("textarea");
+    el.value = text;
+    el.style.position = "fixed";
+    el.style.opacity = "0";
+    document.body.appendChild(el);
+    el.select();
+    try {
+      document.execCommand("copy");
+    } catch (e) {
+      // best-effort fallback, ignore if unsupported
+    }
+    document.body.removeChild(el);
+  }
+
   function openEditor(filename, collection, draft) {
     listError.hidden = true;
     api("GET", "/api/posts/" + encodeURIComponent(filename) + "?collection=" + collection + "&draft=" + !!draft)
@@ -253,6 +324,7 @@
         editorStatus.textContent = filename;
         btnDelete.hidden = false;
         updateToggleDraftButton();
+        updateLinkUI();
         viewList.hidden = true;
         viewEditor.hidden = false;
         cm.refresh();
@@ -275,6 +347,7 @@
         editorStatus.textContent = PAGE_TITLES[name] || name;
         btnDelete.hidden = true;
         btnToggleDraft.hidden = true;
+        updateLinkUI();
         viewList.hidden = true;
         viewEditor.hidden = false;
         cm.refresh();
@@ -296,6 +369,7 @@
     editorStatus.textContent = collection === "posts" ? "New post" : "New project";
     btnDelete.hidden = true;
     updateToggleDraftButton();
+    updateLinkUI();
     viewList.hidden = true;
     viewEditor.hidden = false;
     cm.refresh();
@@ -342,6 +416,7 @@
           editorStatus.textContent = res.filename + " — saved";
           btnDelete.hidden = false;
           updateToggleDraftButton();
+          updateLinkUI();
         })
         .catch(function (err) {
           alert("Error saving: " + err.message);
@@ -375,6 +450,7 @@
         fieldDraft.checked = current.draft;
         editorStatus.textContent = res.filename + (current.draft ? " — moved to drafts" : " — published");
         updateToggleDraftButton();
+        updateLinkUI();
       })
       .catch(function (err) {
         alert("Error: " + err.message);
@@ -402,6 +478,7 @@
   document.getElementById("btn-save").onclick = save;
   document.getElementById("btn-delete").onclick = remove;
   btnToggleDraft.onclick = toggleDraft;
+  btnCopyLink.onclick = copyLink;
 
   showList();
 })();
