@@ -133,5 +133,14 @@ footer {
 }
 
 footer nav {
-  margin-bottom: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.footer-links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
 }

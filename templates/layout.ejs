@@ -15,16 +15,18 @@
   </main>
   <footer>
     <nav>
-      <a href="/">Home</a> ·
-      <a href="/blog/">Blog</a> ·
-      <a href="/projects/">Projects</a> ·
-      <a href="/cv/">CV</a>
+      <ul class="footer-links">
+        <li><a href="/">Home</a></li>
+        <li><a href="/blog/">Blog</a></li>
+        <li><a href="/projects/">Projects</a></li>
+        <li><a href="/cv/">CV</a></li>
+      </ul>
     </nav>
-    <p class="social">
-      <a href="https://github.com/<%= site.github %>">GitHub</a> ·
-      <a href="https://linkedin.com/in/<%= site.linkedin %>">LinkedIn</a> ·
-      <a href="mailto:<%= site.email %>"><%= site.email %></a>
-    </p>
+    <ul class="footer-links social">
+      <li><a href="https://github.com/<%= site.github %>">GitHub</a></li>
+      <li><a href="https://linkedin.com/in/<%= site.linkedin %>">LinkedIn</a></li>
+      <li><a href="mailto:<%= site.email %>"><%= site.email %></a></li>
+    </ul>
   </footer>
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" onload="window.__katexReady && window.__katexReady()"></script>
