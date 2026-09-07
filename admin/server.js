@@ -9,6 +9,7 @@ const openBrowser = require("./lib/open");
 
 const ROOT = path.join(__dirname, "..");
 const CONTENT_DIR = path.join(ROOT, "content");
+const TEMPLATES_DIR = path.join(ROOT, "templates");
 const ASSETS_DIR = path.join(ROOT, "assets");
 const IMAGES_DIR = path.join(ASSETS_DIR, "images");
 const DIRS = {
@@ -31,8 +32,52 @@ app.use(express.json());
 // Editor UI
 app.use(express.static(path.join(__dirname, "public")));
 
-// Local live preview of the generated site
+// Local live preview of the generated site: HTML pages get a small
+// live-reload snippet injected (see /api/live-reload below) so the tab
+// refreshes itself whenever content/templates/assets change, from the
+// admin UI or from hand-editing files directly. Non-HTML files (css,
+// images, pdfs...) fall through to a plain static file server.
+const LIVE_RELOAD_SCRIPT = `
+<script>
+(function () {
+  var es = new EventSource("/api/live-reload");
+  es.onmessage = function () { location.reload(); };
+})();
+</script>`;
+
+app.get(/^\/preview(\/.*)?$/, (req, res, next) => {
+  let reqPath = req.path.slice("/preview".length) || "/";
+  if (reqPath.endsWith("/")) reqPath += "index.html";
+  if (path.extname(reqPath) !== ".html") return next();
+  const filePath = path.join(SITE_DIR, reqPath);
+  if (!filePath.startsWith(SITE_DIR)) return res.status(400).end();
+  fs.readFile(filePath, "utf8", (err, html) => {
+    if (err) return next();
+    res.type("html").send(html.replace("</body>", `${LIVE_RELOAD_SCRIPT}</body>`));
+  });
+});
 app.use("/preview", express.static(SITE_DIR));
+
+// Live-reload channel: the preview page listens on this and reloads
+// whenever the site is rebuilt (see rebuild() / notifyLiveReload() below).
+const liveReloadClients = [];
+app.get("/api/live-reload", (req, res) => {
+  res.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive",
+  });
+  res.write("\n");
+  liveReloadClients.push(res);
+  req.on("close", () => {
+    const idx = liveReloadClients.indexOf(res);
+    if (idx !== -1) liveReloadClients.splice(idx, 1);
+  });
+});
+
+function notifyLiveReload() {
+  liveReloadClients.forEach((res) => res.write("data: reload\n\n"));
+}
 
 // Serve assets/ at the same absolute path they'll have on the published
 // site (/assets/...), so images inserted while writing show up immediately
@@ -75,8 +120,27 @@ function writePost(dir, filename, frontmatter, body) {
 function rebuild() {
   try {
     build();
+    notifyLiveReload();
   } catch (err) {
     console.error("Build failed:", err.message);
+  }
+}
+
+// Watch content/templates/assets so edits made outside the admin UI (e.g.
+// hand-editing a .md file, or dropping in an image) also trigger a rebuild
+// and a live-reload of the /preview tab.
+let watchTimer = null;
+function scheduleRebuild() {
+  clearTimeout(watchTimer);
+  watchTimer = setTimeout(rebuild, 150);
+}
+for (const dir of [CONTENT_DIR, TEMPLATES_DIR, ASSETS_DIR]) {
+  if (fs.existsSync(dir)) {
+    try {
+      fs.watch(dir, { recursive: true }, scheduleRebuild);
+    } catch (err) {
+      console.warn(`Could not watch ${dir} for changes: ${err.message}`);
+    }
   }
 }
 
@@ -136,7 +200,6 @@ app.post("/api/posts", (req, res) => {
     if (tags && tags.length) frontmatter.tags = tags;
     if (excerpt) frontmatter.excerpt = excerpt;
     writePost(dir, filename, frontmatter, body);
-    rebuild();
     res.json({ filename });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -153,7 +216,6 @@ app.put("/api/posts/:filename", (req, res) => {
     const dir = draft ? DIRS.drafts : dirFor(col);
     if (!fs.existsSync(path.join(dir, filename))) return res.status(404).json({ error: "not found" });
     writePost(dir, filename, frontmatter, body);
-    rebuild();
     res.json({ ok: true });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -171,7 +233,6 @@ app.delete("/api/posts/:filename", (req, res) => {
     const full = path.join(dir, filename);
     if (!fs.existsSync(full)) return res.status(404).json({ error: "not found" });
     fs.unlinkSync(full);
-    rebuild();
     res.json({ ok: true });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -199,7 +260,6 @@ app.post("/api/posts/:filename/move", (req, res) => {
     }
     writePost(dir, newFilename, frontmatter, body);
     fs.unlinkSync(srcFull);
-    rebuild();
     res.json({ filename: newFilename });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -223,7 +283,6 @@ app.put("/api/pages/:name", (req, res) => {
   const { frontmatter, body } = req.body;
   try {
     fs.writeFileSync(file, matter.stringify(body || "", frontmatter || {}));
-    rebuild();
     res.json({ ok: true });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -260,7 +319,9 @@ app.post("/api/assets/images", upload.single("file"), (req, res) => {
 
 rebuild();
 app.listen(PORT, "127.0.0.1", () => {
-  const url = `http://127.0.0.1:${PORT}`;
-  console.log(`Admin editor running at ${url} (bound to localhost only)`);
-  openBrowser(url);
+  const base = `http://127.0.0.1:${PORT}`;
+  console.log(`Admin editor running at ${base} (bound to localhost only)`);
+  console.log(`Live site preview at ${base}/preview/ (auto-reloads on every change)`);
+  openBrowser(`${base}/`);
+  openBrowser(`${base}/preview/`);
 });

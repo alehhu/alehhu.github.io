@@ -5,7 +5,7 @@
   "description": "Personal site + local blog editor for alehhu.github.io",
   "scripts": {
     "build": "node admin/build.js",
-    "admin": "node admin/server.js"
+    "admin": "bash scripts/dev.sh"
   },
   "dependencies": {
     "codemirror": "^5.65.16",
