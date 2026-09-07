@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Alessandro Hu</title>
+<link rel="stylesheet" href="/vendor/codemirror/lib/codemirror.css">
+<link rel="stylesheet" href="/vendor/katex/katex.min.css">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1>Editor blog</h1>
+    <button id="btn-new-post" type="button">+ Nuovo post</button>
+    <button id="btn-new-project" type="button">+ Nuovo progetto</button>
+  </header>
+
+  <section id="view-list">
+    <div id="list-error" class="error" hidden></div>
+    <h2>Post</h2>
+    <div id="posts-list" class="items"></div>
+    <h2>Progetti</h2>
+    <div id="portfolio-list" class="items"></div>
+  </section>
+
+  <section id="view-editor" hidden>
+    <div class="editor-toolbar">
+      <button id="btn-back" type="button">&larr; Torna alla lista</button>
+      <span id="editor-status" class="status"></span>
+      <span class="spacer"></span>
+      <button id="btn-toggle-draft" type="button" hidden></button>
+      <button id="btn-delete" type="button" class="danger" hidden>Elimina</button>
+      <button id="btn-save" type="button" class="primary">Salva</button>
+    </div>
+
+    <div class="frontmatter-form">
+      <label>Titolo
+        <input id="field-title" type="text" placeholder="Titolo del post">
+      </label>
+      <label>Data
+        <input id="field-date" type="date">
+      </label>
+      <label>Tag (separati da virgola)
+        <input id="field-tags" type="text" placeholder="es. matematica, quantum">
+      </label>
+      <label>Estratto (opzionale)
+        <input id="field-excerpt" type="text" placeholder="Breve descrizione">
+      </label>
+      <label class="checkbox">
+        <input id="field-draft" type="checkbox">
+        Bozza (non pubblicata sul sito)
+      </label>
+    </div>
+
+    <div class="split">
+      <div class="pane pane-editor">
+        <textarea id="markdown-source"></textarea>
+      </div>
+      <div class="pane pane-preview">
+        <div id="preview" class="rendered"></div>
+      </div>
+    </div>
+  </section>
+
+  <script src="/vendor/codemirror/lib/codemirror.js"></script>
+  <script src="/vendor/codemirror/mode/markdown/markdown.js"></script>
+  <script src="/vendor/marked/marked.umd.js"></script>
+  <script src="/vendor/katex/katex.min.js"></script>
+  <script src="/vendor/katex/contrib/auto-render.min.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

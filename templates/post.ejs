@@ -1,0 +1,9 @@
+<article class="post">
+  <h1><%= page.title %></h1>
+  <% if (page.date) { %>
+    <p class="meta"><%= new Date(page.date).toISOString().slice(0, 10) %></p>
+  <% } %>
+  <div class="post-body">
+    <%- content %>
+  </div>
+</article>

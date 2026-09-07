@@ -1,0 +1,16 @@
+<article class="list">
+  <h1><%= page.title %></h1>
+  <% if (!items.length) { %>
+    <p>Nessun contenuto ancora.</p>
+  <% } else { %>
+    <ul class="post-list">
+      <% items.forEach(function (item) { %>
+        <li>
+          <a href="<%= item.url %>"><%= item.title %></a>
+          <span class="date"><%= new Date(item.date).toISOString().slice(0, 10) %></span>
+          <% if (item.excerpt) { %><p class="excerpt"><%= item.excerpt %></p><% } %>
+        </li>
+      <% }); %>
+    </ul>
+  <% } %>
+</article>
