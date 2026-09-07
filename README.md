@@ -25,7 +25,7 @@ npx serve _site # local static preview
 npm run admin
 ```
 
-Opens a local editor at `http://127.0.0.1:4000` (never exposed beyond localhost) with a live preview and math support (`$...$`, `$$...$$`). Manages blog posts (`content/posts/`, with `content/drafts/` for unpublished ones), portfolio entries (`content/portfolio/`), and the Home/CV pages (`content/home.md`, `content/cv.md`). Publishing (`git add && git commit && git push`) stays a manual step.
+This is the single command for local work: pulls the latest changes (best-effort, never destructive), installs/updates dependencies only if needed, then starts the admin editor at `http://127.0.0.1:4000` and a live-reloading preview of the site at `http://127.0.0.1:4000/preview/` (both open automatically). The editor (never exposed beyond localhost) has a live preview and math support (`$...$`, `$$...$$`), and lets you insert images by button, drag & drop, or pasting from the clipboard. Manages blog posts (`content/posts/`, with `content/drafts/` for unpublished ones), portfolio entries (`content/portfolio/`), and the Home/CV pages (`content/home.md`, `content/cv.md`). The `/preview/` tab auto-refreshes on every change, whether made through the editor or by hand-editing files. Publishing (`git add && git commit && git push`) stays a manual step.
 
 ## Deploy
 
