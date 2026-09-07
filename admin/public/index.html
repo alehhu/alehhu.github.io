@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,45 +10,47 @@
 </head>
 <body>
   <header class="topbar">
-    <h1>Editor blog</h1>
-    <button id="btn-new-post" type="button">+ Nuovo post</button>
-    <button id="btn-new-project" type="button">+ Nuovo progetto</button>
+    <h1>Blog editor</h1>
+    <button id="btn-new-post" type="button">+ New post</button>
+    <button id="btn-new-project" type="button">+ New project</button>
   </header>
 
   <section id="view-list">
     <div id="list-error" class="error" hidden></div>
-    <h2>Post</h2>
+    <h2>Pages</h2>
+    <div id="pages-list" class="items"></div>
+    <h2>Posts</h2>
     <div id="posts-list" class="items"></div>
-    <h2>Progetti</h2>
+    <h2>Projects</h2>
     <div id="portfolio-list" class="items"></div>
   </section>
 
   <section id="view-editor" hidden>
     <div class="editor-toolbar">
-      <button id="btn-back" type="button">&larr; Torna alla lista</button>
+      <button id="btn-back" type="button">&larr; Back to list</button>
       <span id="editor-status" class="status"></span>
       <span class="spacer"></span>
       <button id="btn-toggle-draft" type="button" hidden></button>
-      <button id="btn-delete" type="button" class="danger" hidden>Elimina</button>
-      <button id="btn-save" type="button" class="primary">Salva</button>
+      <button id="btn-delete" type="button" class="danger" hidden>Delete</button>
+      <button id="btn-save" type="button" class="primary">Save</button>
     </div>
 
     <div class="frontmatter-form">
-      <label>Titolo
-        <input id="field-title" type="text" placeholder="Titolo del post">
+      <label>Title
+        <input id="field-title" type="text" placeholder="Post title">
       </label>
-      <label>Data
+      <label id="field-date-wrap">Date
         <input id="field-date" type="date">
       </label>
-      <label>Tag (separati da virgola)
-        <input id="field-tags" type="text" placeholder="es. matematica, quantum">
+      <label id="field-tags-wrap">Tags (comma-separated)
+        <input id="field-tags" type="text" placeholder="e.g. math, quantum">
       </label>
-      <label>Estratto (opzionale)
-        <input id="field-excerpt" type="text" placeholder="Breve descrizione">
+      <label id="field-excerpt-wrap">Excerpt (optional)
+        <input id="field-excerpt" type="text" placeholder="Short description">
       </label>
-      <label class="checkbox">
+      <label id="field-draft-wrap" class="checkbox">
         <input id="field-draft" type="checkbox">
-        Bozza (non pubblicata sul sito)
+        Draft (not published on the site)
       </label>
     </div>
 

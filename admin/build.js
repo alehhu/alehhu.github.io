@@ -124,7 +124,7 @@ function build() {
   fs.mkdirSync(OUT, { recursive: true });
 
   const posts = loadCollection(path.join(CONTENT, "posts"), "/blog/");
-  const portfolio = loadCollection(path.join(CONTENT, "portfolio"), "/progetti/");
+  const portfolio = loadCollection(path.join(CONTENT, "portfolio"), "/projects/");
 
   const home = readContentFile(path.join(CONTENT, "home.md"));
   writeFile("index.html", renderPage("home.ejs", { page: home.frontmatter, content: home.html }));
@@ -141,18 +141,18 @@ function build() {
   }
 
   writeFile(
-    "progetti/index.html",
-    renderPage("list.ejs", { page: { title: "Progetti" }, items: portfolio })
+    "projects/index.html",
+    renderPage("list.ejs", { page: { title: "Projects" }, items: portfolio })
   );
   for (const item of portfolio) {
-    writeFile(`progetti/${item.slug}/index.html`, renderPage("post.ejs", { page: item, content: item.html }));
+    writeFile(`projects/${item.slug}/index.html`, renderPage("post.ejs", { page: item, content: item.html }));
   }
 
   writeFile("feed.xml", buildFeed(posts));
   const urls = [
     "",
     "blog/",
-    "progetti/",
+    "projects/",
     "cv/",
     ...posts.map((p) => p.url.slice(1)),
     ...portfolio.map((p) => p.url.slice(1)),

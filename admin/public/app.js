@@ -3,6 +3,7 @@
 
   var viewList = document.getElementById("view-list");
   var viewEditor = document.getElementById("view-editor");
+  var pagesListEl = document.getElementById("pages-list");
   var postsListEl = document.getElementById("posts-list");
   var portfolioListEl = document.getElementById("portfolio-list");
   var listError = document.getElementById("list-error");
@@ -12,12 +13,20 @@
   var fieldTags = document.getElementById("field-tags");
   var fieldExcerpt = document.getElementById("field-excerpt");
   var fieldDraft = document.getElementById("field-draft");
+  var fieldDateWrap = document.getElementById("field-date-wrap");
+  var fieldTagsWrap = document.getElementById("field-tags-wrap");
+  var fieldExcerptWrap = document.getElementById("field-excerpt-wrap");
+  var fieldDraftWrap = document.getElementById("field-draft-wrap");
   var editorStatus = document.getElementById("editor-status");
   var btnToggleDraft = document.getElementById("btn-toggle-draft");
   var btnDelete = document.getElementById("btn-delete");
   var preview = document.getElementById("preview");
 
-  // current post being edited: { filename, collection, draft, isNew }
+  var PAGE_TITLES = { home: "Home", cv: "CV" };
+
+  // current item being edited:
+  //  - page:       { kind: 'page', name, isNew: false }
+  //  - post/entry: { kind: 'item', filename, collection, draft, isNew }
   var current = null;
 
   var cm = CodeMirror.fromTextArea(document.getElementById("markdown-source"), {
@@ -113,12 +122,12 @@
     if (item.draft) {
       var badge = document.createElement("span");
       badge.className = "badge draft";
-      badge.textContent = "bozza";
+      badge.textContent = "draft";
       row.appendChild(badge);
     }
 
     var editBtn = document.createElement("button");
-    editBtn.textContent = "Modifica";
+    editBtn.textContent = "Edit";
     editBtn.onclick = function () {
       openEditor(item.filename, item.collection, item.draft);
     };
@@ -127,10 +136,35 @@
     return row;
   }
 
+  function renderPageRow(name, title) {
+    var row = document.createElement("div");
+    row.className = "item-row";
+
+    var titleEl = document.createElement("span");
+    titleEl.className = "title";
+    titleEl.textContent = title;
+    row.appendChild(titleEl);
+
+    var editBtn = document.createElement("button");
+    editBtn.textContent = "Edit";
+    editBtn.onclick = function () {
+      openPage(name);
+    };
+    row.appendChild(editBtn);
+
+    return row;
+  }
+
   function loadList() {
     listError.hidden = true;
+    pagesListEl.innerHTML = "";
     postsListEl.innerHTML = "";
     portfolioListEl.innerHTML = "";
+
+    Object.keys(PAGE_TITLES).forEach(function (name) {
+      pagesListEl.appendChild(renderPageRow(name, PAGE_TITLES[name]));
+    });
+
     Promise.all([
       api("GET", "/api/posts?collection=posts&include_drafts=true"),
       api("GET", "/api/posts?collection=portfolio"),
@@ -142,14 +176,14 @@
           return (b.date || "").localeCompare(a.date || "");
         });
         if (!posts.length) {
-          postsListEl.innerHTML = "<p>Nessun post ancora.</p>";
+          postsListEl.innerHTML = "<p>No posts yet.</p>";
         } else {
           posts.forEach(function (item) {
             postsListEl.appendChild(renderItemRow(item));
           });
         }
         if (!portfolio.length) {
-          portfolioListEl.innerHTML = "<p>Nessun progetto ancora.</p>";
+          portfolioListEl.innerHTML = "<p>No projects yet.</p>";
         } else {
           portfolio.forEach(function (item) {
             portfolioListEl.appendChild(renderItemRow(item));
@@ -158,7 +192,7 @@
       })
       .catch(function (err) {
         listError.hidden = false;
-        listError.textContent = "Errore nel caricamento: " + err.message;
+        listError.textContent = "Error loading content: " + err.message;
       });
   }
 
@@ -190,20 +224,28 @@
     };
   }
 
+  function setPageMode(isPage) {
+    fieldDateWrap.hidden = isPage;
+    fieldTagsWrap.hidden = isPage;
+    fieldExcerptWrap.hidden = isPage;
+    fieldDraftWrap.hidden = isPage;
+  }
+
   function updateToggleDraftButton() {
-    if (!current || current.isNew || current.collection !== "posts") {
+    if (!current || current.kind !== "item" || current.isNew || current.collection !== "posts") {
       btnToggleDraft.hidden = true;
       return;
     }
     btnToggleDraft.hidden = false;
-    btnToggleDraft.textContent = current.draft ? "Pubblica" : "Sposta in bozze";
+    btnToggleDraft.textContent = current.draft ? "Publish" : "Move to drafts";
   }
 
   function openEditor(filename, collection, draft) {
     listError.hidden = true;
     api("GET", "/api/posts/" + encodeURIComponent(filename) + "?collection=" + collection + "&draft=" + !!draft)
       .then(function (data) {
-        current = { filename: filename, collection: collection, draft: !!draft, isNew: false };
+        current = { kind: "item", filename: filename, collection: collection, draft: !!draft, isNew: false };
+        setPageMode(false);
         fillForm(data.frontmatter);
         fieldDraft.checked = !!draft;
         fieldDraft.disabled = collection !== "posts";
@@ -218,17 +260,40 @@
       })
       .catch(function (err) {
         listError.hidden = false;
-        listError.textContent = "Errore nell'apertura: " + err.message;
+        listError.textContent = "Error opening item: " + err.message;
+      });
+  }
+
+  function openPage(name) {
+    listError.hidden = true;
+    api("GET", "/api/pages/" + encodeURIComponent(name))
+      .then(function (data) {
+        current = { kind: "page", name: name, isNew: false };
+        setPageMode(true);
+        fillForm(data.frontmatter);
+        cm.setValue(data.body || "");
+        editorStatus.textContent = PAGE_TITLES[name] || name;
+        btnDelete.hidden = true;
+        btnToggleDraft.hidden = true;
+        viewList.hidden = true;
+        viewEditor.hidden = false;
+        cm.refresh();
+        updatePreview();
+      })
+      .catch(function (err) {
+        listError.hidden = false;
+        listError.textContent = "Error opening page: " + err.message;
       });
   }
 
   function newItem(collection) {
-    current = { filename: null, collection: collection, draft: false, isNew: true };
+    current = { kind: "item", filename: null, collection: collection, draft: false, isNew: true };
+    setPageMode(false);
     fillForm(null);
     fieldDraft.checked = false;
     fieldDraft.disabled = collection !== "posts";
     cm.setValue("");
-    editorStatus.textContent = collection === "posts" ? "Nuovo post" : "Nuovo progetto";
+    editorStatus.textContent = collection === "posts" ? "New post" : "New project";
     btnDelete.hidden = true;
     updateToggleDraftButton();
     viewList.hidden = true;
@@ -241,10 +306,24 @@
   function save() {
     var form = readForm();
     if (!form.title) {
-      alert("Il titolo è obbligatorio.");
+      alert("Title is required.");
       return;
     }
     var body = cm.getValue();
+
+    if (current.kind === "page") {
+      api("PUT", "/api/pages/" + encodeURIComponent(current.name), {
+        frontmatter: { title: form.title },
+        body: body,
+      })
+        .then(function () {
+          editorStatus.textContent = (PAGE_TITLES[current.name] || current.name) + " — saved";
+        })
+        .catch(function (err) {
+          alert("Error saving: " + err.message);
+        });
+      return;
+    }
 
     if (current.isNew) {
       api("POST", "/api/posts", {
@@ -260,12 +339,12 @@
           current.filename = res.filename;
           current.isNew = false;
           current.draft = current.collection === "posts" ? fieldDraft.checked : false;
-          editorStatus.textContent = res.filename + " — salvato";
+          editorStatus.textContent = res.filename + " — saved";
           btnDelete.hidden = false;
           updateToggleDraftButton();
         })
         .catch(function (err) {
-          alert("Errore nel salvataggio: " + err.message);
+          alert("Error saving: " + err.message);
         });
     } else {
       var frontmatter = { title: form.title, date: form.date };
@@ -278,33 +357,33 @@
         collection: current.collection,
       })
         .then(function () {
-          editorStatus.textContent = current.filename + " — salvato";
+          editorStatus.textContent = current.filename + " — saved";
         })
         .catch(function (err) {
-          alert("Errore nel salvataggio: " + err.message);
+          alert("Error saving: " + err.message);
         });
     }
   }
 
   function toggleDraft() {
-    if (!current || current.isNew) return;
+    if (!current || current.kind !== "item" || current.isNew) return;
     var to = current.draft ? "posts" : "drafts";
     api("POST", "/api/posts/" + encodeURIComponent(current.filename) + "/move", { to: to })
       .then(function (res) {
         current.filename = res.filename;
         current.draft = to === "drafts";
         fieldDraft.checked = current.draft;
-        editorStatus.textContent = res.filename + (current.draft ? " — spostato in bozze" : " — pubblicato");
+        editorStatus.textContent = res.filename + (current.draft ? " — moved to drafts" : " — published");
         updateToggleDraftButton();
       })
       .catch(function (err) {
-        alert("Errore: " + err.message);
+        alert("Error: " + err.message);
       });
   }
 
   function remove() {
-    if (!current || current.isNew) return;
-    if (!confirm("Eliminare definitivamente questo contenuto?")) return;
+    if (!current || current.kind !== "item" || current.isNew) return;
+    if (!confirm("Permanently delete this content?")) return;
     api(
       "DELETE",
       "/api/posts/" + encodeURIComponent(current.filename) + "?collection=" + current.collection + "&draft=" + current.draft
@@ -313,7 +392,7 @@
         showList();
       })
       .catch(function (err) {
-        alert("Errore nell'eliminazione: " + err.message);
+        alert("Error deleting: " + err.message);
       });
   }
 

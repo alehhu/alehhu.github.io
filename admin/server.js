@@ -7,10 +7,16 @@ const { slugify } = require("./lib/render");
 const openBrowser = require("./lib/open");
 
 const ROOT = path.join(__dirname, "..");
+const CONTENT_DIR = path.join(ROOT, "content");
 const DIRS = {
-  posts: path.join(ROOT, "content", "posts"),
-  portfolio: path.join(ROOT, "content", "portfolio"),
-  drafts: path.join(ROOT, "content", "drafts"),
+  posts: path.join(CONTENT_DIR, "posts"),
+  portfolio: path.join(CONTENT_DIR, "portfolio"),
+  drafts: path.join(CONTENT_DIR, "drafts"),
+};
+// Singleton pages (not a collection): edited in place, no date/tags/draft state.
+const PAGES = {
+  home: path.join(CONTENT_DIR, "home.md"),
+  cv: path.join(CONTENT_DIR, "cv.md"),
 };
 const SITE_DIR = path.join(ROOT, "_site");
 const PORT = 4000;
@@ -184,6 +190,30 @@ app.post("/api/posts/:filename/move", (req, res) => {
     fs.unlinkSync(srcFull);
     rebuild();
     res.json({ filename: newFilename });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Read a singleton page (home, cv)
+app.get("/api/pages/:name", (req, res) => {
+  const file = PAGES[req.params.name];
+  if (!file) return res.status(404).json({ error: "unknown page" });
+  if (!fs.existsSync(file)) return res.status(404).json({ error: "not found" });
+  const raw = fs.readFileSync(file, "utf8");
+  const { data, content } = matter(raw);
+  res.json({ frontmatter: data, body: content });
+});
+
+// Overwrite a singleton page (home, cv)
+app.put("/api/pages/:name", (req, res) => {
+  const file = PAGES[req.params.name];
+  if (!file) return res.status(404).json({ error: "unknown page" });
+  const { frontmatter, body } = req.body;
+  try {
+    fs.writeFileSync(file, matter.stringify(body || "", frontmatter || {}));
+    rebuild();
+    res.json({ ok: true });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
