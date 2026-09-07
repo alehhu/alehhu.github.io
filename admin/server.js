@@ -53,7 +53,12 @@ app.get(/^\/preview(\/.*)?$/, (req, res, next) => {
   if (!filePath.startsWith(SITE_DIR)) return res.status(400).end();
   fs.readFile(filePath, "utf8", (err, html) => {
     if (err) return next();
-    res.type("html").send(html.replace("</body>", `${LIVE_RELOAD_SCRIPT}</body>`));
+    // The built pages use root-absolute links (href="/blog/", src="/assets/...")
+    // since that's correct once deployed at the real site root. Under this local
+    // preview they're served at /preview/..., so rewrite those links to match —
+    // otherwise every link/image on the page 404s against the admin server root.
+    const rewritten = html.replace(/(href|src)="\//g, '$1="/preview/');
+    res.type("html").send(rewritten.replace("</body>", `${LIVE_RELOAD_SCRIPT}</body>`));
   });
 });
 app.use("/preview", express.static(SITE_DIR));
